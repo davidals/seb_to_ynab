@@ -15,7 +15,7 @@ class YnabClient():
 
     def get_budgets(self):
         url = self.ynab_base_url + "budgets/"
-        
+
         r = requests.get(url, headers=self.headers)
         return r.json()["data"]["budgets"]
 
@@ -24,7 +24,7 @@ class YnabClient():
 
     def get_transactions(self, budget_id, since_date=None):
         url = self.ynab_base_url + "budgets/%s/transactions/" % budget_id
-       
+
         if since_date:
             url += "?since_date=%s" % since_date.strftime("%y-%m-%d")
 
@@ -37,7 +37,8 @@ class YnabClient():
             transactions_payload.append({
                 "account_id": account_id,
                 "date": transaction["Datum"],
-                "amount": int(float(transaction["Belopp"]) * -1 * 1000),  # *-1 since it's an expense, *1000 to put in correct unit
+                # *-1 since it's an expense, *1000 to put in correct unit
+                "amount": int(float(transaction["Belopp"]) * -1 * 1000),
                 "payee_id": None,
                 "payee_name": transaction["Specifikation"],
                 "category_id": None,
@@ -48,13 +49,13 @@ class YnabClient():
                 "import_id": None
             })
         payload = {"transactions": transactions_payload}
-        url = url = self.ynab_base_url + "budgets/%s/transactions/bulk" % budget_id
+        url = self.ynab_base_url + "budgets/%s/transactions/bulk" % budget_id
         r = requests.post(url, json=payload, headers=self.headers)
         return r.json()
 
-    def update_transaction(self, budget_id, transacton_id, transaction):
-        payload = {"transaction" : transaction}
-        url = url = self.ynab_base_url + "budgets/%s/transactions/%s" % (budget_id, transaction_id)
+    def update_transaction(self, budget_id, transaction_id, transaction):
+        payload = {"transaction": transaction}
+        url = self.ynab_base_url + "budgets/%s/transactions/%s" % (budget_id, transaction_id)
 
         r = requests.put(url, json=payload, headers=self.headers)
         return r.json()
@@ -64,7 +65,6 @@ def read_and_clean_file():
     transaction_rows = []
     header = ""
 
-    rows = []
     with open(sys.argv[2], 'rU') as csvFile:
         csvreader = csv.reader(csvFile, delimiter=';', dialect=csv.excel_tab)
         rows = [r for r in csvreader]
@@ -82,7 +82,8 @@ def read_and_clean_file():
     yield "\t".join(header)
     for row in transaction_rows:
         row[0] = '%s-%s' % (datetime.now().year, row[0])
-        row[6] = row[6].replace(',','.').replace('\xc2\xa0', '') # First replace to dots then replace the unicode space chars
+        # First replace to dots then replace the unicode space chars
+        row[6] = row[6].replace(',', '.').replace('\xc2\xa0','')
         yield "\t".join(row)
 
 
@@ -91,22 +92,25 @@ def get_transactions_from_file():
     csvreader = csv.DictReader(read_and_clean_file(), delimiter="\t", dialect=csv.excel_tab)
     for row in csvreader:
         transaction_rows.append(row)
-    return sorted(transaction_rows, key=lambda r : r["Datum"])
+    return sorted(transaction_rows, key=lambda r: r["Datum"])
 
 
 def get_transactions_to_add_to_ynab(transactions, ynab_transactions):
-    return [transaction for transaction in transactions if not is_in_ynab(transaction, ynab_transactions)]
+    return [transaction for transaction in transactions if
+            not is_in_ynab(transaction, ynab_transactions)]
 
-    
+
 def is_in_ynab(transaction, ynab_transactions):
-    for ynab_transaction in ynab_transactions:        
-        same_date = datetime.strptime(transaction["Datum"], "%Y-%m-%d") == datetime.strptime(ynab_transaction["date"], "%Y-%m-%d")
-        same_value = -1 * float(transaction["Belopp"]) == float(ynab_transaction["amount"])/1000
-        same_name = unicode(transaction["Specifikation"], encoding='UTF-8') == ynab_transaction["payee_name"] and \
+    for ynab_transaction in ynab_transactions:
+        same_date = datetime.strptime(transaction["Datum"], "%Y-%m-%d") == datetime.strptime(
+            ynab_transaction["date"], "%Y-%m-%d")
+        same_value = -1 * float(transaction["Belopp"]) == float(ynab_transaction["amount"]) / 1000
+        transaction_payee = unicode(transaction["Specifikation"], encoding='UTF-8')
+        same_name = transaction_payee == ynab_transaction["payee_name"] and \
                     not ynab_transaction["payee_name"].startswith(u"Transfer")
         if (same_date and same_value and same_name):
             return True
-    return False 
+    return False
 
 
 if __name__ == "__main__":
@@ -128,4 +132,3 @@ if __name__ == "__main__":
     client.add_transactions(budget_id, ynab_transactions[0]["account_id"], new_transactions)
 
     print "Created %s transactions to YNAB" % len(new_transactions)
-
