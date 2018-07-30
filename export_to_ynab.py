@@ -52,6 +52,12 @@ class YnabClient():
         r = requests.post(url, json=payload, headers=self.headers)
         return r.json()
 
+    def update_transaction(self, budget_id, transacton_id, transaction):
+        payload = {"transaction" : transaction}
+        url = url = self.ynab_base_url + "budgets/%s/transactions/%s" % (budget_id, transaction_id)
+
+        r = requests.put(url, json=payload, headers=self.headers)
+        return r.json()
 
 def read_and_clean_file():
     tx_rows = []
@@ -95,7 +101,9 @@ def is_in_ynab(tx, ynab_txs):
     for ynab_tx in ynab_txs:        
         same_date = datetime.strptime(tx["Datum"], "%Y-%m-%d") == datetime.strptime(ynab_tx["date"], "%Y-%m-%d")
         same_value = -1 * float(tx["Belopp"]) == float(ynab_tx["amount"])/1000
-        if (same_date and same_value):
+        same_name = unicode(tx["Specifikation"], encoding='UTF-8') == ynab_tx["payee_name"] and \
+                    not ynab_tx["payee_name"].startswith(u"Transfer")
+        if (same_date and same_value and same_name):
             return True
     return False 
 
