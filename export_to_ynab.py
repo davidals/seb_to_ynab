@@ -42,7 +42,7 @@ class YnabClient():
                 "payee_id": None,
                 "payee_name": transaction["Specifikation"],
                 "category_id": None,
-                "memo": transaction["Specifikation"],
+                "memo": None,
                 "cleared": "cleared" if transaction["Bokfört"] != "Reserverat" else "uncleared",
                 "approved": False,
                 "flag_color": None,
