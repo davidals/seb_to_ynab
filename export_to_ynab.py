@@ -39,7 +39,7 @@ class YnabClient():
                 "date": tx["Datum"],
                 "amount": int(float(tx["Belopp"]) * -1 * 1000),  # *-1 since it's an expense, *1000 to put in correct unit
                 "payee_id": None,
-                "payee_name": None,
+                "payee_name": tx["Specifikation"],
                 "category_id": None,
                 "memo": tx["Specifikation"],
                 "cleared": "cleared" if tx["Bokfört"] != "Reserverat" else "uncleared",
